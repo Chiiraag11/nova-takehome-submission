@@ -12,6 +12,8 @@ permissions:
 
 jobs:
   grade:
+    # Skip on the published template itself (its harness is the empty stub); runs on every candidate's copy.
+    if: github.repository != 'gocomet-india/nova-takehome'
     runs-on: ubuntu-latest
     timeout-minutes: 90
     env:
