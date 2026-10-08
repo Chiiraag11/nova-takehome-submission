@@ -83,8 +83,14 @@ def ocr_pdf(data):
     """Best-effort OCR fallback; used only for image-only PDFs."""
     try:
         import pymupdf
+        import numpy as np
+        from rapidocr_onnxruntime import RapidOCR
+
+        engine = RapidOCR()
+
         with pymupdf.open(stream=data, filetype='pdf') as doc:
             out=[]
+            
             for page in doc:
                 pix=page.get_pixmap(matrix=pymupdf.Matrix(2.4,2.4), alpha=False)
                 png=pix.tobytes('png')
@@ -397,14 +403,16 @@ def parse_invoice(a):
         m=re.search(r'STATEMENT OF ACCOUNT\s+([A-Z0-9_/-]+)',txt,re.I)
     if not m:
         m=re.search(r'Freight bill no\.\s*([A-Z0-9_/-]+)',txt,re.I)
-    iid=m.group(1).upper() if m else None
+    iid = m.group(1).upper() if m else None
     # Scanned invoices can lose the numeric suffix in OCR; when the attachment
     # filename is an invoice-like id and clearly extends the extracted prefix,
     # prefer the printed filename as the authoritative invoice id.
+    fnstem = Path(a.get('filename', '')).stem.upper()
     if iid:
-        fnstem=Path(a.get('filename','')).stem.upper()
-        if fnstem.startswith(iid+'-') and re.search(r'\d', fnstem):
-            iid=fnstem
+        if fnstem.startswith(iid + '-') and re.search(r'\d', fnstem):
+            iid = fnstem
+    elif re.fullmatch(r'[A-Z]{2,8}-[A-Z0-9]+-[A-Z0-9-]+', fnstem):
+            iid = fnstem
     md=re.search(r'Document date\s+(\d\d/\d\d/\d{4})\s+Payable by\s+(\d\d/\d\d/\d{4})',txt)
     if md: inv_date=iso_date(md.group(1)); due=iso_date(md.group(2))
     else:
@@ -497,11 +505,41 @@ def build_indexes(docs):
         for a in d.get('attachments',[]):
             fn=a.get('filename','').lower()
             txt='\n'.join(a.get('pages',[]))
-            if a['kind']=='pdf' and re.search(r'charges advice|invoice|statement of account|freight bill no\.',txt,re.I) and not re.search(r'master services agreement|amendment no\.',txt,re.I):
-                inv=parse_invoice(a)
-                # Require a real billing header; do not treat contract clauses containing the word 'invoice' as bills.
-                if inv['id'] and (re.search(r'(?:Charges advice|Invoice|Freight bill no\.|STATEMENT OF ACCOUNT)\s*[-#A-Z0-9]',txt,re.I)):
+            filename_stem = Path(a.get('filename', '')).stem
+            invoice_header = bool(
+                re.search(
+                    r'charges advice|invoice|statement of account|freight bill no\.',
+                    txt,
+                    re.I
+                )
+            )
+
+            invoice_filename = bool(
+                re.fullmatch(
+                    r'[A-Z]{2,8}-[A-Z0-9]+-[A-Z0-9-]+',
+                    filename_stem,
+                    re.I
+                )
+            )
+
+            if (
+                a['kind'] == 'pdf'
+                and (invoice_header or invoice_filename)
+                and not re.search(r'master services agreement|amendment no\.', txt, re.I)
+            ):
+                inv = parse_invoice(a)
+
+                if inv['id'] and (
+                    re.search(
+                    r'(?:Charges advice|Invoice|Freight bill no\.|STATEMENT OF ACCOUNT)\s*[-#A-Z0-9]',
+                    txt,
+                    re.I
+                    )
+                    or invoice_filename
+                ):
                     invoices.append(inv)
+
+
             if a['kind']=='xlsx':
                 rows=parse_xlsx(a)
                 xtext='\n'.join(a.get('pages',[]))
@@ -576,12 +614,29 @@ def normalize_lane(lane, contract):
 
 
 def tracking_pickup(track,awb,fallback):
-    ev=[x for x in track if x['awb'].upper()==awb.upper() and x['event']=='PICKED_UP' and x.get('date')]
+    if not awb:
+        return fallback
+    
+    ev = [
+        x for x in track
+        if x.get('awb')
+        and x['awb'].upper() == awb.upper()
+        and x['event'] == 'PICKED_UP'
+        and x.get('date')
+    ]
     return min(x['date'] for x in ev) if ev else fallback
 
 def tracking_event(track,awb,event):
-    es=[x for x in track if x['awb'].upper()==awb.upper() and x['event']==event and x.get('date')]
-    return min(es,key=lambda x:x['date']) if es else None
+    if not awb:
+        return None
+    es = [
+        x for x in track
+        if x.get('awb')
+        and x['awb'].upper() == awb.upper()
+        and x['event'] == event
+        and x.get('date')
+    ]
+    return min(es, key=lambda x: x['date']) if es else None
 
 
 def date_for_invoice(inv,track):
