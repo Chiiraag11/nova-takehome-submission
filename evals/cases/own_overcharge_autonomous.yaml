@@ -1,0 +1,12 @@
+name: overcharge can execute safely below threshold
+mailbox: data/examples/overcharge/docs
+as_of: '2032-08-31'
+mode: autonomous
+expect:
+  key:
+    invoice_id: TX-US-2032-5394
+    class: overcharge
+  verdict: finding
+  amount_usd: '196.92'
+  action: execute:dispute
+why: Verifies the unattended-action threshold on a complete, non-conflicting invoice finding.

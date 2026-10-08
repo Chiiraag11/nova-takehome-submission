@@ -1,0 +1,10 @@
+name: extended late fee can be owed
+mailbox: data/examples/late_fees/docs
+as_of: '2033-02-28'
+mode: supervised
+expect:
+  key:
+    invoice_id: TX-US-2033-5582
+    class: late_fee_not_owed
+  verdict: no_finding
+why: Guards the boundary between an owed and an unowed late fee.

@@ -1,0 +1,93 @@
+{
+ "harness": "harness/harness.py",
+ "passed": 14,
+ "total": 14,
+ "your_cases": 12,
+ "score": 1.0,
+ "cases": [
+  {
+   "case": "own_cashback_claim.yaml",
+   "name": "closed quarter rebate is claimable",
+   "pass": true,
+   "diff": []
+  },
+  {
+   "case": "own_clean_band.yaml",
+   "name": "adjacent weight band remains clean",
+   "pass": true,
+   "diff": []
+  },
+  {
+   "case": "own_conflict_autonomous.yaml",
+   "name": "trusted rate disagreement still requires escalation",
+   "pass": true,
+   "diff": []
+  },
+  {
+   "case": "own_duplicate_rebill.yaml",
+   "name": "later invoice line is a duplicate under another label",
+   "pass": true,
+   "diff": []
+  },
+  {
+   "case": "own_duplicate_reminder.yaml",
+   "name": "paid invoice resend is a duplicate",
+   "pass": true,
+   "diff": []
+  },
+  {
+   "case": "own_expiry_alert.yaml",
+   "name": "contract expiry inside sixty days is alerted",
+   "pass": true,
+   "diff": []
+  },
+  {
+   "case": "own_late_fee_clean.yaml",
+   "name": "extended late fee can be owed",
+   "pass": true,
+   "diff": []
+  },
+  {
+   "case": "own_late_fee_extension.yaml",
+   "name": "extended due date removes late fee",
+   "pass": true,
+   "diff": []
+  },
+  {
+   "case": "own_overcharge_autonomous.yaml",
+   "name": "overcharge can execute safely below threshold",
+   "pass": true,
+   "diff": []
+  },
+  {
+   "case": "own_scan_invoice_id.yaml",
+   "name": "scanned invoice keeps its full printed identifier",
+   "pass": true,
+   "diff": []
+  },
+  {
+   "case": "own_waiver_authority.yaml",
+   "name": "authorized waiver is enforceable",
+   "pass": true,
+   "diff": []
+  },
+  {
+   "case": "own_waiver_scope.yaml",
+   "name": "waiver does not spread to another shipment",
+   "pass": true,
+   "diff": []
+  },
+  {
+   "case": "sample_conflict.yaml",
+   "name": "amendment and rate notice disagree",
+   "pass": true,
+   "diff": []
+  },
+  {
+   "case": "sample_overcharge.yaml",
+   "name": "wrong rate on one freight line",
+   "pass": true,
+   "diff": []
+  }
+ ]
+}

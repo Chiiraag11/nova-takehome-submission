@@ -1,0 +1,12 @@
+name: extended due date removes late fee
+mailbox: data/examples/late_fees/docs
+as_of: '2033-02-28'
+mode: supervised
+expect:
+  key:
+    invoice_id: TX-US-2032-5496
+    class: late_fee_not_owed
+  verdict: finding
+  amount_usd: '12.65'
+  action: draft:dispute
+why: Exercises authorized due-date extension and late-fee arithmetic.

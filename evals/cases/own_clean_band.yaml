@@ -1,0 +1,10 @@
+name: adjacent weight band remains clean
+mailbox: data/examples/overcharge/docs
+as_of: '2032-08-31'
+mode: supervised
+expect:
+  key:
+    invoice_id: TX-US-2032-5397
+    class: overcharge
+  verdict: no_finding
+why: Guards the weight-band boundary and minimum-charge calculation.

@@ -1,0 +1,12 @@
+name: paid invoice resend is a duplicate
+mailbox: data/examples/duplicate/docs
+as_of: '2033-08-31'
+mode: supervised
+expect:
+  key:
+    invoice_id: TX-US-2033-5511
+    class: duplicate
+  verdict: finding
+  amount_usd: '1259.23'
+  action: draft:dispute
+why: Exercises same-invoice resend detection against the AP ledger.

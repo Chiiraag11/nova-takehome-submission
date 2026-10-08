@@ -1,0 +1,12 @@
+name: contract expiry inside sixty days is alerted
+mailbox: data/examples/expiry/docs
+as_of: '2034-02-28'
+mode: supervised
+expect:
+  key:
+    contract_id: TBX-US-EXP-E24
+    class: expiry
+  verdict: finding
+  action: internal:alert
+  deadline: '2034-03-20'
+why: Exercises the sixty-day expiry window and internal-only action.

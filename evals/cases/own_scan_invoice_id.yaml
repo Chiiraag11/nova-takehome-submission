@@ -1,0 +1,12 @@
+name: scanned invoice keeps its full printed identifier
+mailbox: evals/mailboxes/scan_id
+as_of: '2031-02-28'
+mode: supervised
+expect:
+  key:
+    invoice_id: CDI-3031-0306
+    class: overcharge
+  verdict: finding
+  amount_usd: '85.46'
+  action: draft:dispute
+why: This regression case caught OCR truncation of a scanned invoice id; the attachment filename restores the full key.
