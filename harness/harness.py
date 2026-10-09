@@ -78,44 +78,127 @@ def first_money(s):
 
 def all_money(s): return [D(x.replace(',','')) for x in re.findall(r'(?<![\w.])([0-9][0-9,]*\.\d{2})(?!\w)', s)]
 
+def _tesseract_text(png):
+    try:
+        import pytesseract
+        from PIL import Image
+        return pytesseract.image_to_string(
+            Image.open(io.BytesIO(png)),
+            config='--psm 6'
+        )
+    except Exception:
+        pass
+
+    with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as f:
+        f.write(png)
+        p = f.name
+
+    try:
+        r = subprocess.run(
+            ['tesseract', p, 'stdout', '--psm', '6'],
+            text=True,
+            capture_output=True,
+            timeout=30
+        )
+        return r.stdout
+    finally:
+        os.unlink(p)
+
+
+def _vision_text(png):
+    """Transcribe a scanned page with Claude vision."""
+    import anthropic
+
+    client = anthropic.Anthropic()
+    model = os.environ.get(
+        "ANTHROPIC_MODEL",
+        "claude-sonnet-5-5"
+    )
+
+    msg = client.messages.create(
+        model=model,
+        max_tokens=2000,
+        messages=[{
+            'role': 'user',
+            'content': [
+                {
+                    'type': 'image',
+                    'source': {
+                        'type': 'base64',
+                        'media_type': 'image/png',
+                        'data': base64.b64encode(png).decode('utf-8')
+                    }
+                },
+                {
+                    'type': 'text',
+                    'text': (
+                        'Transcribe all text on this page exactly. '
+                        'Preserve line breaks and values. '
+                        'Do not summarize or interpret. '
+                        'Output only the transcribed text.'
+                    )
+                }
+            ]
+        }]
+    )
+
+    return "\n".join(
+        block.text
+        for block in msg.content
+        if getattr(block, "type", None) == "text"
+    )
+
+
+def _rapid_text(png):
+    from rapidocr_onnxruntime import RapidOCR
+
+    result, _ = RapidOCR()(png)
+    return '\n'.join(
+        str(r[1])
+        for r in (result or [])
+        if len(r) >= 2
+    )
+
 
 def ocr_pdf(data):
-    """Best-effort OCR fallback; used only for image-only PDFs."""
+    """OCR for image-only PDFs: Tesseract, Claude vision, then RapidOCR."""
     try:
         import pymupdf
-        import numpy as np
-        from rapidocr_onnxruntime import RapidOCR
 
-        engine = RapidOCR()
+        out = []
 
         with pymupdf.open(stream=data, filetype='pdf') as doc:
-            out=[]
-            
             for page in doc:
-                pix=page.get_pixmap(matrix=pymupdf.Matrix(2.4,2.4), alpha=False)
-                png=pix.tobytes('png')
-                try:
-                    import pytesseract
-                    from PIL import Image
-                    im=Image.open(io.BytesIO(png))
-                    txt=pytesseract.image_to_string(im, config='--psm 6')
-                except Exception:
-                    with tempfile.NamedTemporaryFile(suffix='.png', delete=False) as f:
-                        f.write(png); p=f.name
+                png = page.get_pixmap(
+                    matrix=pymupdf.Matrix(2.4, 2.4),
+                    alpha=False
+                ).tobytes('png')
+
+                txt = ''
+
+                for engine in (
+                    _tesseract_text,
+                    _vision_text,
+                    _rapid_text,
+                ):
                     try:
-                        r=subprocess.run(['tesseract',p,'stdout','--psm','6'],text=True,capture_output=True,timeout=30)
-                        txt=r.stdout
-                    finally:
-                        os.unlink(p)
+                        txt = engine(png)
+                    except Exception:
+                        txt = ''
+
+                    if txt and txt.strip():
+                        break
+
                 out.append(txt)
-            return out
+
+        return out
+
     except Exception:
         return ['']
 
 
 def parse_email_bytes(data):
     return BytesParser(policy=policy.default).parsebytes(data)
-
 
 def line_pages_pdf(data, scan=False):
     if not scan:
